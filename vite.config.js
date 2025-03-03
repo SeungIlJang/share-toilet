@@ -15,4 +15,8 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  preview: {
+    allowedHosts: ['share-toilet.onrender.com', 'localhost']
+  }
+
 })
