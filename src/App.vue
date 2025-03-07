@@ -58,7 +58,7 @@ const fetchToilets = async () => {
       const endIndex = page * pageSize;
       
       const response = await fetch(
-        `//openapi.seoul.go.kr:8088/${API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`
+        `http//openapi.seoul.go.kr:8088/${API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`
       );
       const xmlText = await response.text();
       const parser = new DOMParser();
