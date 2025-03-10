@@ -1,15 +1,18 @@
 <script setup>
 import NaverMapMarker from "@/components/NaverMapMarker.vue";
 import { ref, onMounted, computed } from 'vue';
+import {toiletsData} from './assets/data.js';
 
-const API_KEY = '62636d69436a6173383664786f6451';
+const SEOUL_GO_API_KEY = '62636d69436a6173383664786f6451';
 const locations = ref([]); // 전체 화장실 데이터
 const displayedLocations = ref([]); // 지도에 표시할 데이터
 const selectedToiletId = ref(null);
 const searchQuery = ref('');
 const isLoading = ref(false);
 const centerLocation = ref(null);
-const searchRadius = 1000; // 1km 반경
+// const searchRadius = 1000; // 1km 반경
+const searchRadius = 500; // 500m 반경
+const isInternetDisconnected = ref(false);
 
 // 검색된 화장실 목록
 const filteredLocations = computed(() => {
@@ -58,7 +61,7 @@ const fetchToilets = async () => {
       const endIndex = page * pageSize;
       
       const response = await fetch(
-        `http://openapi.seoul.go.kr:8088/${API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`
+        `http://openapi.seoul.go.kr:8088/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`
       );
       const xmlText = await response.text();
       const parser = new DOMParser();
@@ -72,6 +75,7 @@ const fetchToilets = async () => {
         const guNm = row.getElementsByTagName('GU_NM')[0]?.textContent;
         const hnrNam = row.getElementsByTagName('HNR_NAM')[0]?.textContent;
         const newAddress = row.getElementsByTagName('NEADRES_NM')[0]?.textContent;
+        const masterno = row.getElementsByTagName('MASTERNO')[0]?.textContent;
 
         return {
           id: row.getElementsByTagName('OBJECTID')[0]?.textContent || ((page - 1) * pageSize + index + 1),
@@ -81,7 +85,8 @@ const fetchToilets = async () => {
           address: `${guNm} ${hnrNam}`,
           guName: guNm,
           dongName: hnrNam,
-          newAddress: newAddress?.trim() || null
+          newAddress: newAddress?.trim() || null,
+          masterno : masterno
         };
       }).filter(location => location.latitude && location.longitude);
 
@@ -95,9 +100,13 @@ const fetchToilets = async () => {
     }
 
     locations.value = allLocations;
+    isInternetDisconnected.value = false;
   } catch (error) {
     console.error('화장실 정보 가져오기 실패:', error);
-  } finally {
+    isInternetDisconnected.value = true;
+    locations.value = toiletsData;
+   } finally {
+    console.log(locations.value)
     isLoading.value = false;
   }
 };
@@ -152,23 +161,54 @@ const handleLocationClick = (location) => {
 };
 
 // 현재 위치로 이동하고 근처 화장실 표시
-const moveToCurrentLocation = () => {
-  navigator.geolocation.getCurrentPosition((position) => {
-    const { latitude, longitude } = position.coords;
-    centerLocation.value = { latitude, longitude };
+const moveToCurrentLocation =  () => {
+  try{
+    if(isInternetDisconnected.value === false) {
+       navigator.geolocation.getCurrentPosition((position) => {
+        const {latitude, longitude} = position.coords;
+        centerLocation.value = {latitude, longitude};
 
-    // 근처 화장실 필터링
-    displayedLocations.value = locations.value.filter(location => {
-      const distance = getDistanceFromLatLonInKm(latitude, longitude, location.latitude, location.longitude);
-      return distance <= searchRadius / 1000; // 반경 내의 화장실
-    });
-  }, (error) => {
-    console.error('현재 위치를 가져올 수 없습니다:', error);
-  });
+        // 근처 화장실 필터링
+        displayedLocations.value = locations.value.filter(location => {
+          const distance = getDistanceFromLatLonInKm(latitude, longitude, location.latitude, location.longitude);
+          return distance <= searchRadius / 1000; // 반경 내의 화장실
+        });
+      }, (error) => {
+        console.error('현재 위치를 가져올 수 없습니다:', error);
+        // {"hnr_nam":"성산동","gu_nm":"마포구","slaveno":"7","masterno":"41","lng":"126.9143751","creat_de":null,"neadres_nm":" ","objectid":688,"mtc_at":"1","lat":"37.5620983"},
+        const {latitude, longitude} = {latitude: '37.5620983', longitude: '126.9143751'};
+        centerLocation.value = {latitude, longitude};
+
+        // 근처 화장실 필터링
+        displayedLocations.value = locations.value.filter( location => {
+          const distance =  getDistanceFromLatLonInKm(latitude, longitude, location.latitude, location.longitude);
+          return distance <= searchRadius / 1000; // 반경 내의 화장실
+        });
+      });
+    }else{
+      console.error('isInternetDisconnected:',isInternetDisconnected.value );
+      // {"hnr_nam":"성산동","gu_nm":"마포구","slaveno":"7","masterno":"41","lng":"126.9143751","creat_de":null,"neadres_nm":" ","objectid":688,"mtc_at":"1","lat":"37.5620983"},
+      const {latitude, longitude} = {latitude: '37.5620983', longitude: '126.9143751'};
+      centerLocation.value = {latitude, longitude};
+
+      // 근처 화장실 필터링
+      displayedLocations.value = locations.value.filter( location => {
+        const distance =  getDistanceFromLatLonInKm(latitude, longitude, location.latitude, location.longitude);
+        if(distance <= searchRadius / 1000) {
+          console.log('근처 화장실 필터링', distance, (searchRadius / 1000), searchRadius);
+        }
+        return distance <= searchRadius / 1000; // 반경 내의 화장실
+      });
+      console.log('displayedLocations',displayedLocations.value);
+    }
+
+}catch (e) {
+    console.error(e);
+  }
 };
 
 // 두 좌표 간의 거리 계산 함수 (Haversine formula)
-const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+const getDistanceFromLatLonInKm =  (lat1, lon1, lat2, lon2) => {
   const R = 6371; // 지구 반지름 (km)
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
@@ -184,7 +224,7 @@ const deg2rad = (deg) => {
   return deg * (Math.PI/180);
 };
 
-onMounted(() => {
+onMounted( () => {
   fetchToilets().then(() => {
     moveToCurrentLocation(); // 컴포넌트가 마운트될 때 현재 위치로 이동
   });
@@ -194,7 +234,7 @@ onMounted(() => {
 <template>
   <div class="container">
     <div class="map-container">
-      <NaverMapMarker 
+      <NaverMapMarker v-if="!isInternetDisconnected"
         :locations="displayedLocations" 
         :selected-id="selectedToiletId"
         :center="centerLocation"
@@ -276,6 +316,7 @@ onMounted(() => {
 
 .search-input {
   width: 100%;
+  height: 45px;
   padding: 8px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;

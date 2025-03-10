@@ -105,10 +105,12 @@ const initMap = () => {
       content: `
         <div class="info-window">
           <h3>${location.title}</h3>
-          <p>주소: ${location.address}</p>
+          <p>주소: 서울시 ${location.address} ${location.masterno}번지</p>
           ${location.newAddress ? `<p>도로명: ${location.newAddress}</p>` : ''}
-          <p>구: ${location.guName}</p>
-          <p>동: ${location.dongName}</p>
+          <!--<p>${location.guName}</p>
+          <p>${location.dongName}</p>
+          <p>${location.masterno}번지</p>
+          -->
         </div>
       `,
     });
