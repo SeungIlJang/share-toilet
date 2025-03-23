@@ -287,7 +287,7 @@ onMounted( () => {
             @click="handleLocationClick(location)"
           >
             <h3>{{ location.title }}</h3>
-            <p>{{ location.address }}</p>
+            <p>{{ location.address }} {{location.masterno || ''}}번지</p>
             <p v-if="location.newAddress" class="new-address">도로명: {{ location.newAddress }}</p>
           </li>
         </ul>
@@ -322,7 +322,8 @@ onMounted( () => {
   border-top: 1px solid #ddd;
   display: flex;
   gap: 15px;
-  height: 250px;
+  height: 230px; /* Reduced height to move it up */
+  margin-top: -20px; /* Negative margin to move it up */
 }
 
 .search-container {
