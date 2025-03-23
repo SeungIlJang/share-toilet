@@ -56,71 +56,76 @@ const fetchToilets = async () => {
     const pageSize = 1000;
     const allLocations = [];
 
-    while (hasMore) {
-      const startIndex = (page - 1) * pageSize + 1;
-      const endIndex = page * pageSize;
+    // while (hasMore) {
+    //   const startIndex = (page - 1) * pageSize + 1;
+    //   const endIndex = page * pageSize;
+    //
+    //   // CORS 프록시 사용
+    //   // const corsProxy = 'https://corsproxy.io/?';
+    //   // const apiUrl = `http://openapi.seoul.go.kr:8088/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`;
+    //   // const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
+    //   // https://corsproxy.io/? (위 예제에서 사용)
+    //   // https://cors-anywhere.herokuapp.com/ (사용량 제한 있음)
+    //   // https://api.allorigins.win/raw?url= (다른 대안)
+    //   // 이 방법은 임시 해결책이며, 장기적으로는 다음 방법을 고려해보세요:
+    //   // 자체 프록시 서버 구축 (Node.js + Express)
+    //   // 정기적으로 데이터를 다운로드하여 정적 파일로 제공
+    //
+    //   /* https->http임시해결방법*/
+    //   // const corsProxy = 'https://thingproxy.freeboard.io/fetch/';
+    //   // const apiUrl = `http://openapi.seoul.go.kr:8088/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`;
+    //   // const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
+    //
+    //
+    //   // const response = await fetch(
+    //   //   `http://openapi.seoul.go.kr:808/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`
+    //   // );
+    //   const xmlText = await response.text();
+    //   const parser = new DOMParser();
+    //   const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+    //
+    //   const rows = xmlDoc.getElementsByTagName('row');
+    //
+    //   const pageLocations = Array.from(rows).map((row, index) => {
+    //     const lat = row.getElementsByTagName('LAT')[0]?.textContent;
+    //     const lng = row.getElementsByTagName('LNG')[0]?.textContent;
+    //     const guNm = row.getElementsByTagName('GU_NM')[0]?.textContent;
+    //     const hnrNam = row.getElementsByTagName('HNR_NAM')[0]?.textContent;
+    //     const newAddress = row.getElementsByTagName('NEADRES_NM')[0]?.textContent;
+    //     const masterno = row.getElementsByTagName('MASTERNO')[0]?.textContent;
+    //
+    //     return {
+    //       id: row.getElementsByTagName('OBJECTID')[0]?.textContent || ((page - 1) * pageSize + index + 1),
+    //       title: `${guNm} ${hnrNam} 공중화장실`,
+    //       latitude: parseFloat(lat),
+    //       longitude: parseFloat(lng),
+    //       address: `${guNm} ${hnrNam}`,
+    //       guName: guNm,
+    //       dongName: hnrNam,
+    //       newAddress: newAddress?.trim() || null,
+    //       masterno : masterno
+    //     };
+    //   }).filter(location => location.latitude && location.longitude);
+    //
+    //   allLocations.push(...pageLocations);
+    //   page++;
+    //
+    //   if (rows.length !== pageSize) {
+    //     hasMore = false;
+    //     break;
+    //   }
+    // }
+    //
+    // locations.value = allLocations;
+    // isInternetDisconnected.value = false;
 
-      // CORS 프록시 사용
-      // const corsProxy = 'https://corsproxy.io/?';
-      // const apiUrl = `http://openapi.seoul.go.kr:8088/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`;
-      // const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
-      // https://corsproxy.io/? (위 예제에서 사용)
-      // https://cors-anywhere.herokuapp.com/ (사용량 제한 있음)
-      // https://api.allorigins.win/raw?url= (다른 대안)
-      // 이 방법은 임시 해결책이며, 장기적으로는 다음 방법을 고려해보세요:
-      // 자체 프록시 서버 구축 (Node.js + Express)
-      // 정기적으로 데이터를 다운로드하여 정적 파일로 제공
+    console.error('화장실 정보 가져오기 실패:');
+    // isInternetDisconnected.value = true;
+    locations.value = toiletsData;
 
-      /* https->http임시해결방법*/
-      const corsProxy = 'https://thingproxy.freeboard.io/fetch/';
-      const apiUrl = `http://openapi.seoul.go.kr:8088/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`;
-      const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
-
-
-      // const response = await fetch(
-      //   `http://openapi.seoul.go.kr:808/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`
-      // );
-      const xmlText = await response.text();
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-      
-      const rows = xmlDoc.getElementsByTagName('row');
-      
-      const pageLocations = Array.from(rows).map((row, index) => {
-        const lat = row.getElementsByTagName('LAT')[0]?.textContent;
-        const lng = row.getElementsByTagName('LNG')[0]?.textContent;
-        const guNm = row.getElementsByTagName('GU_NM')[0]?.textContent;
-        const hnrNam = row.getElementsByTagName('HNR_NAM')[0]?.textContent;
-        const newAddress = row.getElementsByTagName('NEADRES_NM')[0]?.textContent;
-        const masterno = row.getElementsByTagName('MASTERNO')[0]?.textContent;
-
-        return {
-          id: row.getElementsByTagName('OBJECTID')[0]?.textContent || ((page - 1) * pageSize + index + 1),
-          title: `${guNm} ${hnrNam} 공중화장실`,
-          latitude: parseFloat(lat),
-          longitude: parseFloat(lng),
-          address: `${guNm} ${hnrNam}`,
-          guName: guNm,
-          dongName: hnrNam,
-          newAddress: newAddress?.trim() || null,
-          masterno : masterno
-        };
-      }).filter(location => location.latitude && location.longitude);
-
-      allLocations.push(...pageLocations);
-      page++;
-
-      if (rows.length !== pageSize) {
-        hasMore = false;
-        break;
-      }
-    }
-
-    locations.value = allLocations;
-    isInternetDisconnected.value = false;
   } catch (error) {
     console.error('화장실 정보 가져오기 실패:', error);
-    isInternetDisconnected.value = true;
+    // isInternetDisconnected.value = true;
     locations.value = toiletsData;
    } finally {
     console.log(locations.value)
