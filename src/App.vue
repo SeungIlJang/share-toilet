@@ -70,10 +70,16 @@ const fetchToilets = async () => {
       // 이 방법은 임시 해결책이며, 장기적으로는 다음 방법을 고려해보세요:
       // 자체 프록시 서버 구축 (Node.js + Express)
       // 정기적으로 데이터를 다운로드하여 정적 파일로 제공
-      
-      const response = await fetch(
-        `http://openapi.seoul.go.kr:8088/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`
-      );
+
+      /* https->http임시해결방법*/
+      const corsProxy = 'https://thingproxy.freeboard.io/fetch/';
+      const apiUrl = `http://openapi.seoul.go.kr:8088/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`;
+      const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
+
+
+      // const response = await fetch(
+      //   `http://openapi.seoul.go.kr:808/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`
+      // );
       const xmlText = await response.text();
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlText, "text/xml");
