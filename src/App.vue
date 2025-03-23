@@ -59,6 +59,17 @@ const fetchToilets = async () => {
     while (hasMore) {
       const startIndex = (page - 1) * pageSize + 1;
       const endIndex = page * pageSize;
+
+      // CORS 프록시 사용
+      // const corsProxy = 'https://corsproxy.io/?';
+      // const apiUrl = `http://openapi.seoul.go.kr:8088/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`;
+      // const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
+      // https://corsproxy.io/? (위 예제에서 사용)
+      // https://cors-anywhere.herokuapp.com/ (사용량 제한 있음)
+      // https://api.allorigins.win/raw?url= (다른 대안)
+      // 이 방법은 임시 해결책이며, 장기적으로는 다음 방법을 고려해보세요:
+      // 자체 프록시 서버 구축 (Node.js + Express)
+      // 정기적으로 데이터를 다운로드하여 정적 파일로 제공
       
       const response = await fetch(
         `http://openapi.seoul.go.kr:8088/${SEOUL_GO_API_KEY}/xml/GeoInfoPublicToiletWGS/${startIndex}/${endIndex}/`
@@ -234,7 +245,8 @@ onMounted( () => {
 <template>
   <div class="container">
     <div class="map-container">
-      <NaverMapMarker v-if="!isInternetDisconnected"
+      <!-- <NaverMapMarker v-if="!isInternetDisconnected" -->
+      <NaverMapMarker
         :locations="displayedLocations" 
         :selected-id="selectedToiletId"
         :center="centerLocation"
