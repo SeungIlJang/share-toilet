@@ -120,7 +120,7 @@ const fetchToilets = async () => {
     // isInternetDisconnected.value = false;
 
     // console.error('화장실 정보 가져오기 실패:');
-    locations.value = toiletsData;
+    locations.value = await toiletsData;
 
   } catch (error) {
     console.error('화장실 정보 가져오기 실패:', error);
