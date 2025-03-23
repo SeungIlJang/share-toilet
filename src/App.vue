@@ -127,7 +127,7 @@ const fetchToilets = async () => {
     // isInternetDisconnected.value = true;
     locations.value = toiletsData;
    } finally {
-    console.log(locations.value)
+    // console.log(locations.value)
     isLoading.value = false;
   }
 };
