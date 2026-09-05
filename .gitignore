@@ -14,6 +14,14 @@ dist-ssr
 coverage
 *.local
 
+# Claude Code 세션/도구 디렉터리
+.claude/
+
+# 환경변수 (API 키 등 민감정보) - .env.example 은 커밋
+.env
+.env.*
+!.env.example
+
 /cypress/videos/
 /cypress/screenshots/
 
@@ -28,3 +36,9 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# Android release signing secrets and build artifacts
+android/keystore.properties
+android/*.jks
+android/*.keystore
+android/app/release/

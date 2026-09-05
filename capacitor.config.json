@@ -1,0 +1,17 @@
+{
+  "appId": "com.sharetoilet.app",
+  "appName": "모두의 화장실",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "resetWhenUpdate": true
+    },
+    "Geolocation": {
+      "permissions": ["location"]
+    }
+  }
+}

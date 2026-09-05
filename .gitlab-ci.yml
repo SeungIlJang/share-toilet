@@ -1,0 +1,57 @@
+# ─────────────────────────────────────────────────────────────
+# GitLab CI — 화장실 데이터 자동 갱신 (Phase 1)
+#
+# 예약 파이프라인(Schedules)에서만 실행됩니다.
+#   Settings → CI/CD → Schedules 에서 주기 등록 (예: 매월 1일 03:00)
+#
+# 필요한 CI/CD 변수 (Settings → CI/CD → Variables):
+#   VITE_NAVER_CLIENT_ID  : 네이버 지도 Client ID (지오코딩)
+#   NAVER_CLIENT_SECRET   : 네이버 지도 Client Secret        [Masked 권장]
+#   PROJECT_ACCESS_TOKEN  : write_repository 권한 토큰(데이터 커밋/푸시) [Masked]
+#   SOURCE_CSV_URL        : (선택) 최신 전국 화장실 CSV 다운로드 URL.
+#                            미설정 시 저장소의 캐시/기존 데이터로만 재생성.
+#
+# 동작: 최신 CSV(선택) → 증분 지오코딩(커밋된 캐시 재사용) → data.json 생성
+#       → 변경 시 커밋·푸시 → Render 자동 재배포 → 앱이 최신 데이터 fetch
+# ─────────────────────────────────────────────────────────────
+
+stages:
+  - update
+
+update-data:
+  stage: update
+  image: node:18
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'   # 예약 실행에서만 동작
+  cache:
+    # 지오코딩 캐시를 파이프라인 간 재사용(증분) — git 커밋 없이 유지
+    key: geocode-cache-v1
+    paths:
+      - data/.geocode-cache.json
+  script:
+    - npm ci
+    # 1) 최신 소스 CSV (선택)
+    - |
+      if [ -n "$SOURCE_CSV_URL" ]; then
+        echo "▶ 최신 소스 CSV 다운로드";
+        mkdir -p data;
+        curl -fsSL "$SOURCE_CSV_URL" -o "data/toilets-source.csv";
+      else
+        echo "▶ SOURCE_CSV_URL 미설정 → 기존 캐시/데이터로 재생성 (신규 데이터 없음)";
+      fi
+    # 2) 주소 → 좌표 (증분: 커밋된 .geocode-cache.json 재사용, 새 주소만 호출)
+    - node scripts/geocode-toilets.mjs || echo "지오코딩 스킵/부분실패 — 캐시로 진행"
+    # 3) public/data.json + data-version.json 생성
+    - npm run data:build
+    # 4) 변경분 커밋 & 푸시 → Render 재배포
+    - |
+      git config user.email "ci@share-toilet"
+      git config user.name "data-bot"
+      git add public/data.json public/data-version.json
+      if git diff --cached --quiet; then
+        echo "✔ 변경 없음 — 커밋 생략";
+      else
+        git commit -m "chore(data): 화장실 데이터 자동 갱신 [skip ci]"
+        git push "https://oauth2:${PROJECT_ACCESS_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "HEAD:${CI_DEFAULT_BRANCH}"
+        echo "✔ 데이터 갱신 푸시 완료"
+      fi
