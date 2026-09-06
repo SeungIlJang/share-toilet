@@ -30,9 +30,14 @@ const props = defineProps({
 // 지도 영역 변경(드래그/줌) 시 현재 지도 중심을 부모로 전달
 const emit = defineEmits(['region-changed', 'map-tap', 'set-status']);
 
+// 화장실 id 의 내가 선택한 상태
+const statusKeyFor = (id) => (
+  props.statusMap && props.statusMap[id] ? props.statusMap[id].my : null
+);
+
 // 화장실 id 의 대표 상태색 (= 내가 누른 상태 my)
 const statusColorFor = (id) => {
-  const key = props.statusMap && props.statusMap[id] ? props.statusMap[id].my : null;
+  const key = statusKeyFor(id);
   const opt = key ? props.statusOptions.find((o) => o.key === key) : null;
   return opt ? opt.color : '';
 };
@@ -268,8 +273,8 @@ const buildInfoContent = (loc) => {
 const openInfoId = ref(null);
 
 // 화장실 아이콘 마커 생성 (상태 색 테두리, 선택 시 강조)
-const makeToiletIcon = (selected, statusColor) => ({
-  content: `<div class="toilet-marker${selected ? ' selected' : ''}" style="border-color:${statusColor || '#2196F3'}"><img src="${toiletIconUrl}" alt="화장실" /></div>`,
+const makeToiletIcon = (selected, statusColor, statusKey) => ({
+  content: `<div class="toilet-marker${selected ? ' selected' : ''}${statusKey ? ` status-${statusKey}` : ''}" style="border-color:${statusColor || '#2196F3'}"><img src="${toiletIconUrl}" alt="화장실" /></div>`,
   anchor: new naver.maps.Point(20, 20)
 });
 
@@ -278,7 +283,7 @@ const updateSelectedStyles = (id) => {
   openInfoId.value = id;
   Object.entries(markers.value).forEach(([mid, marker]) => {
     const isSel = String(mid) === String(id);
-    marker.setIcon(makeToiletIcon(isSel, statusColorFor(mid)));
+    marker.setIcon(makeToiletIcon(isSel, statusColorFor(mid), statusKeyFor(mid)));
     marker.setZIndex(isSel ? 300 : 100);
   });
 };
@@ -330,7 +335,11 @@ const createMarkers = () => {
       position: position,
       map: map.value,
       title: location.title,
-      icon: makeToiletIcon(String(location.id) === String(props.selectedId), statusColorFor(location.id)),
+      icon: makeToiletIcon(
+        String(location.id) === String(props.selectedId),
+        statusColorFor(location.id),
+        statusKeyFor(location.id)
+      ),
       zIndex: 100
     });
 
@@ -542,7 +551,11 @@ onUnmounted(() => {
 // 상태 변경 시: 마커 테두리 색 + 열린 정보창 내용 갱신 (전체 재생성 없이)
 watch(() => props.statusMap, () => {
   Object.entries(markers.value).forEach(([mid, marker]) => {
-    marker.setIcon(makeToiletIcon(String(mid) === String(openInfoId.value), statusColorFor(mid)));
+    marker.setIcon(makeToiletIcon(
+      String(mid) === String(openInfoId.value),
+      statusColorFor(mid),
+      statusKeyFor(mid)
+    ));
   });
   const oid = openInfoId.value;
   if (oid && infoWindows.value[oid]) {
@@ -736,6 +749,11 @@ onMounted(async () => {
   height: 26px;
   object-fit: contain;
   pointer-events: none; /* 클릭 이벤트가 마커로 전달되도록 */
+}
+
+/* 사용가능으로 선택한 화장실은 지도에서 즉시 구분되도록 초록 테두리 고정 */
+:deep(.toilet-marker.status-available) {
+  border-color: #2e7d32 !important;
 }
 
 :deep(.toilet-marker.selected) {
