@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
 const UPDATE_ORIGIN = 'https://seungiljang.github.io';
+const UPDATE_PATH_PREFIX = '/share-toilet/live-update/';
 const MANIFEST_URL = `${UPDATE_ORIGIN}/share-toilet/live-update/manifest.json`;
 const CHECK_TIMEOUT_MS = 7000;
 
@@ -28,7 +29,7 @@ const validateManifest = (manifest) => {
 
   try {
     const url = new URL(manifest.url);
-    return url.origin === UPDATE_ORIGIN && url.pathname.startsWith('/live-update/');
+    return url.origin === UPDATE_ORIGIN && url.pathname.startsWith(UPDATE_PATH_PREFIX);
   } catch {
     return false;
   }
