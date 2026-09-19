@@ -6,6 +6,7 @@ import { getCurrentPosition } from './utils/geolocation.js';
 import { loadStatus, saveStatus } from './utils/statusStore.js';
 import { CAR_CAMPING_OPTIONS, withCarCampingInfo } from './utils/carCamping.js';
 import { initializeAdMob } from './services/adMob.js';
+import { matchesToiletSearch } from './utils/toiletSearch.js';
 
 // 화장실 상태 옵션 (사용자 표시, 파일로 저장)
 const STATUS_OPTIONS = [
@@ -138,11 +139,7 @@ const searchResults = computed(() => {
   const query = searchQuery.value.toLowerCase().trim();
   if (!query || !isValidKoreanSearch(query)) return [];
 
-  const filtered = locations.value.filter((location) =>
-    location.title.toLowerCase().includes(query) ||
-    location.address.toLowerCase().includes(query) ||
-    (location.newAddress && location.newAddress.toLowerCase().includes(query))
-  );
+  const filtered = locations.value.filter((location) => matchesToiletSearch(location, query));
 
   const withDist = withDistance(filtered);
   return searchOrigin.value
