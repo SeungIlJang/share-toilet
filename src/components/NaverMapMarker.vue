@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { Capacitor } from '@capacitor/core';
 import { getCurrentPosition } from '@/utils/geolocation.js';
+import { fetchWalkingRoute, formatRouteSummary } from '@/utils/walkingRoute.js';
 import toiletIconUrl from '@/assets/toilet.png';
 
 const props = defineProps({
@@ -60,6 +61,10 @@ const infoWindows = ref({});
 const mapInitialized = ref(false);
 const currentLocationMarker = ref(null); // 현재 위치 마커
 const userPosition = ref(null); // 사용자의 현재 위치 저장
+const routeStops = ref([]);
+const routeLines = ref([]);
+const routeLoading = ref(false);
+const routeSummary = ref('');
 let mapDomElement = null;
 let mapDomClickHandler = null;
 
@@ -213,6 +218,8 @@ const fullAddress = (loc) => {
 const naverRouteWebUrl = (lat, lng, name) =>
   `https://map.naver.com/p/directions/-/${lng},${lat},${encodeURIComponent(name)},,PLACE_POI/-/walk`;
 
+const routeStopIndex = (id) => routeStops.value.findIndex((stop) => String(stop.id) === String(id));
+
 // 정보창 HTML 생성 (풍부한 데이터가 있으면 자동 표시)
 const buildInfoContent = (loc) => {
   // 선택 표시용 부가 정보 (데이터 소스에 있을 때만 노출)
@@ -262,6 +269,7 @@ const buildInfoContent = (loc) => {
       ${distHtml}
       ${statusHtml}
       <div class="info-actions">
+        <button class="info-btn add-route${routeStopIndex(loc.id) >= 0 ? ' active' : ''}" type="button" onclick='window.__stToggleRouteStop(${JSON.stringify(String(loc.id))})'>${routeStopIndex(loc.id) >= 0 ? `✓ 경로 ${routeStopIndex(loc.id) + 1}` : '＋ 경로추가'}</button>
         <button class="info-btn route" type="button" onclick='window.__stRoute(${loc.latitude}, ${loc.longitude}, ${JSON.stringify(loc.title)})'>🧭 길찾기</button>
         <button class="info-btn copy" type="button" onclick='window.__stCopyAddress(${JSON.stringify(addr)})'>📋 주소복사</button>
       </div>
@@ -273,8 +281,8 @@ const buildInfoContent = (loc) => {
 const openInfoId = ref(null);
 
 // 화장실 아이콘 마커 생성 (상태 색 테두리, 선택 시 강조)
-const makeToiletIcon = (selected, statusColor, statusKey) => ({
-  content: `<div class="toilet-marker${selected ? ' selected' : ''}${statusKey ? ` status-${statusKey}` : ''}" style="border-color:${statusColor || '#2196F3'}"><img src="${toiletIconUrl}" alt="화장실" /></div>`,
+const makeToiletIcon = (selected, statusColor, statusKey, routeOrder = 0) => ({
+  content: `<div class="toilet-marker${selected ? ' selected' : ''}${statusKey ? ` status-${statusKey}` : ''}${routeOrder ? ' route-stop' : ''}" style="border-color:${statusColor || '#2196F3'}">${routeOrder ? `<span class="route-order">${routeOrder}</span>` : `<img src="${toiletIconUrl}" alt="화장실" />`}</div>`,
   anchor: new naver.maps.Point(20, 20)
 });
 
@@ -283,7 +291,7 @@ const updateSelectedStyles = (id) => {
   openInfoId.value = id;
   Object.entries(markers.value).forEach(([mid, marker]) => {
     const isSel = String(mid) === String(id);
-    marker.setIcon(makeToiletIcon(isSel, statusColorFor(mid), statusKeyFor(mid)));
+    marker.setIcon(makeToiletIcon(isSel, statusColorFor(mid), statusKeyFor(mid), routeStopIndex(mid) + 1));
     marker.setZIndex(isSel ? 300 : 100);
   });
 };
@@ -338,7 +346,8 @@ const createMarkers = () => {
       icon: makeToiletIcon(
         String(location.id) === String(props.selectedId),
         statusColorFor(location.id),
-        statusKeyFor(location.id)
+        statusKeyFor(location.id),
+        routeStopIndex(location.id) + 1
       ),
       zIndex: 100
     });
@@ -470,9 +479,78 @@ const showToast = (message) => {
 // 정보창 버튼용 전역 헬퍼 (InfoWindow HTML 의 onclick 에서 호출)
 const NAVER_MAP_PACKAGE = 'com.nhn.android.nmap';
 
+const refreshRouteUi = () => {
+  Object.entries(markers.value).forEach(([mid, marker]) => {
+    marker.setIcon(makeToiletIcon(
+      String(mid) === String(openInfoId.value),
+      statusColorFor(mid),
+      statusKeyFor(mid),
+      routeStopIndex(mid) + 1
+    ));
+  });
+  const oid = openInfoId.value;
+  if (oid && infoWindows.value[oid]) {
+    const loc = props.locations.find((item) => String(item.id) === String(oid));
+    if (loc) infoWindows.value[oid].setContent(buildInfoContent(loc));
+  }
+};
+
+const clearRouteLines = () => {
+  routeLines.value.forEach((line) => line.setMap(null));
+  routeLines.value = [];
+  routeSummary.value = '';
+};
+
+const resetRoute = () => {
+  clearRouteLines();
+  routeStops.value = [];
+  refreshRouteUi();
+};
+
+const showRoute = async () => {
+  if (routeStops.value.length < 2 || !map.value || routeLoading.value) return;
+  routeLoading.value = true;
+  clearRouteLines();
+
+  try {
+    const result = await fetchWalkingRoute(routeStops.value);
+    const path = result.points.map(({ latitude, longitude }) => new naver.maps.LatLng(latitude, longitude));
+    const outline = new naver.maps.Polyline({ map: map.value, path, strokeColor: '#ffffff', strokeWeight: 10, strokeOpacity: 0.95, zIndex: 180 });
+    const route = new naver.maps.Polyline({ map: map.value, path, strokeColor: '#e53935', strokeWeight: 6, strokeOpacity: 1, strokeLineCap: 'round', strokeLineJoin: 'round', zIndex: 181 });
+    routeLines.value = [outline, route];
+    routeSummary.value = formatRouteSummary(result);
+
+    const bounds = new naver.maps.LatLngBounds();
+    path.forEach((point) => bounds.extend(point));
+    map.value.fitBounds(bounds, { top: 120, right: 45, bottom: 210, left: 45 });
+    closeInfoWindows();
+  } catch (error) {
+    console.error('보행 경로 조회 실패:', error);
+    showToast(error.message || '경로를 불러오지 못했습니다');
+  } finally {
+    routeLoading.value = false;
+  }
+};
+
 const registerInfoWindowHelpers = () => {
   // 상태 선택 → 부모(App)로 전달 (파일 저장 + 목록/마커 반영)
   window.__stSetStatus = (id, status) => emit('set-status', { id, status });
+
+  window.__stToggleRouteStop = (id) => {
+    const index = routeStopIndex(id);
+    clearRouteLines();
+    if (index >= 0) {
+      routeStops.value.splice(index, 1);
+    } else {
+      if (routeStops.value.length >= 10) {
+        showToast('경로는 최대 10곳까지 추가할 수 있습니다');
+        return;
+      }
+      const location = props.locations.find((item) => String(item.id) === String(id));
+      if (location) routeStops.value.push(location);
+    }
+    refreshRouteUi();
+  };
 
   // 🧭 길찾기: 네이버 지도 앱(도보 경로) → 미설치 시 설치 유도 → 거부 시 웹
   window.__stRoute = async (lat, lng, name) => {
@@ -545,6 +623,7 @@ onUnmounted(() => {
   }
   delete window.__stCopyAddress;
   delete window.__stRoute;
+  delete window.__stToggleRouteStop;
   delete window.__stSetStatus;
 });
 
@@ -554,7 +633,8 @@ watch(() => props.statusMap, () => {
     marker.setIcon(makeToiletIcon(
       String(mid) === String(openInfoId.value),
       statusColorFor(mid),
-      statusKeyFor(mid)
+      statusKeyFor(mid),
+      routeStopIndex(mid) + 1
     ));
   });
   const oid = openInfoId.value;
@@ -590,6 +670,17 @@ onMounted(async () => {
 
 <template>
   <div id="map" class="map-view"></div>
+  <div v-if="routeStops.length" class="route-panel">
+    <div class="route-panel-info">
+      <strong>선택 {{ routeStops.length }}곳</strong>
+      <span v-if="routeSummary">{{ routeSummary }}</span>
+      <span v-else>마커에서 경로를 순서대로 추가하세요</span>
+    </div>
+    <button type="button" class="route-view-btn" :disabled="routeStops.length < 2 || routeLoading" @click="showRoute">
+      {{ routeLoading ? '경로 찾는 중…' : '경로보기' }}
+    </button>
+    <button type="button" class="route-reset-btn" @click="resetRoute">초기화</button>
+  </div>
   <!-- 직접 버튼 추가 -->
   <button class="current-location-btn" @click="showCurrentLocation" title="현재 위치로 이동">
     <span class="current-location-icon"></span>
@@ -696,6 +787,7 @@ onMounted(async () => {
 
 :deep(.info-window .info-actions) {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
 }
@@ -716,6 +808,17 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
+:deep(.info-window .info-btn.add-route) {
+  background: #fff;
+  color: #e53935;
+  border: 1px solid #e53935;
+}
+
+:deep(.info-window .info-btn.add-route.active) {
+  background: #e53935;
+  color: #fff;
+}
+
 :deep(.info-window .info-btn.route) {
   background: #2196F3;
   color: #fff;
@@ -723,9 +826,47 @@ onMounted(async () => {
 }
 
 :deep(.info-window .info-btn.copy) {
+  flex-basis: 100%;
   background: #fff;
   color: #2196F3;
   border: 1px solid #2196F3;
+}
+
+.route-panel {
+  position: absolute;
+  z-index: 500;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100% - 24px), 520px);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
+}
+
+.route-panel-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #666;
+}
+
+.route-panel-info strong { color: #222; font-size: 14px; }
+.route-panel-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.route-view-btn, .route-reset-btn { height: 36px; border-radius: 7px; font-weight: 700; cursor: pointer; }
+.route-view-btn { padding: 0 12px; border: 0; background: #e53935; color: #fff; }
+.route-view-btn:disabled { background: #bbb; cursor: default; }
+.route-reset-btn { padding: 0 9px; border: 1px solid #aaa; background: #fff; color: #555; }
+
+@media (min-width: 769px) {
+  .route-panel { top: 68px; }
 }
 
 /* 화장실 마커 (원형 배지 + 화장실 아이콘) */
@@ -749,6 +890,19 @@ onMounted(async () => {
   height: 26px;
   object-fit: contain;
   pointer-events: none; /* 클릭 이벤트가 마커로 전달되도록 */
+}
+
+:deep(.toilet-marker.route-stop) {
+  background: #e53935;
+  border-color: #fff !important;
+  box-shadow: 0 0 0 2px #e53935, 0 2px 7px rgba(0, 0, 0, 0.4);
+}
+
+:deep(.toilet-marker .route-order) {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 /* 사용가능으로 선택한 화장실은 지도에서 즉시 구분되도록 초록 테두리 고정 */
