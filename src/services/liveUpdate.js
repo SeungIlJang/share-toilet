@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { decideUpdateAction } from '../utils/updateDecision.js';
 
 const UPDATE_ORIGIN = 'https://seungiljang.github.io';
 const UPDATE_PATH_PREFIX = '/share-toilet/live-update/';
@@ -50,7 +51,20 @@ export async function startLiveUpdate() {
       CapacitorUpdater.getNextBundle(),
     ]);
 
-    if (current.version === manifest.version || queued?.version === manifest.version) return;
+    const action = decideUpdateAction({
+      currentVersion: current.version,
+      queuedVersion: queued?.version,
+      targetVersion: manifest.version,
+    });
+
+    if (action === 'none') return;
+
+    // 이미 내려받은 번들이 적용 대기 중이면 그대로 방치하지 않고 즉시 전환한다.
+    if (action === 'reload') {
+      console.info(`[update] 대기 중인 ${manifest.version} 즉시 적용`);
+      await CapacitorUpdater.reload();
+      return;
+    }
 
     const bundle = await CapacitorUpdater.download({
       version: manifest.version,
@@ -58,9 +72,10 @@ export async function startLiveUpdate() {
       checksum: manifest.checksum,
     });
 
-    // 사용 중인 화면을 갑자기 새로고침하지 않고 다음 실행부터 적용한다.
-    await CapacitorUpdater.next({ id: bundle.id });
-    console.info(`[update] ${manifest.version} 다운로드 완료, 다음 실행 시 적용`);
+    // set()은 새 번들을 현재 버전으로 바꾸고 WebView를 즉시 다시 불러온다.
+    // 이 호출은 현재 JavaScript 실행 컨텍스트를 종료하므로 뒤에 로직을 두지 않는다.
+    console.info(`[update] ${manifest.version} 다운로드 완료, 즉시 적용`);
+    await CapacitorUpdater.set({ id: bundle.id });
   } catch (error) {
     // 네트워크/서버 문제는 앱 사용을 막지 않는다. 현재 정상 번들을 그대로 유지한다.
     console.info('[update] 확인 생략:', error?.message || error);
