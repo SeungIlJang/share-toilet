@@ -1,6 +1,6 @@
 <script setup>
 import NaverMapMarker from "@/components/NaverMapMarker.vue";
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { toiletsData } from './assets/data.js';
 import { getCurrentPosition } from './utils/geolocation.js';
 import { loadStatus, saveStatus } from './utils/statusStore.js';
@@ -86,6 +86,12 @@ const showSearchAreaBtn = ref(false); // '이 근처 검색' 버튼 노출 여�
 const sheetExpanded = ref(false); // 하단 목록 시트 펼침 여부 (모바일)
 const carCampingFilter = ref('all'); // 차박 편의정보 필터
 const showCarCampingFilters = ref(false); // 필요할 때만 차박 조회조건 펼침
+const updateMessage = ref(''); // OTA 확인/다운로드/적용 상태
+
+const handleUpdateStatus = (event) => {
+  const { status, message } = event.detail || {};
+  updateMessage.value = status === 'ready' ? '' : (message || '업데이트 중...');
+};
 
 // ── 유틸 ─────────────────────────────────────────────────
 // 두 좌표 간의 거리 계산 (Haversine formula, km)
@@ -437,16 +443,28 @@ const handleMapTap = () => {
 };
 
 onMounted(() => {
+  window.addEventListener('share-toilet:update-status', handleUpdateStatus);
   initializeAdMob();
   loadStatus().then((s) => { toiletStatus.value = migrateStatus(s); }); // 저장된 상태 파일 로드
   fetchToilets().then(() => {
     moveToCurrentLocation(); // 마운트 시 현재 위치 기준으로 주변 화장실 표시
   });
 });
+
+onUnmounted(() => {
+  window.removeEventListener('share-toilet:update-status', handleUpdateStatus);
+});
 </script>
 
 <template>
   <div class="container">
+    <div v-if="updateMessage" class="update-overlay" role="status" aria-live="polite">
+      <div class="update-card">
+        <span class="update-spinner" aria-hidden="true"></span>
+        <strong>{{ updateMessage }}</strong>
+        <span>잠시만 기다려 주세요</span>
+      </div>
+    </div>
     <div class="map-container">
       <NaverMapMarker
         :locations="displayedLocations"
@@ -1043,6 +1061,47 @@ ul:empty::after {
   padding: 20px;
   color: #666;
   font-size: 14px;
+}
+
+.update-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(3px);
+}
+
+.update-card {
+  min-width: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 26px 24px;
+  border-radius: 16px;
+  background: #fff;
+  color: #222;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+}
+
+.update-card strong { font-size: 17px; }
+.update-card span:last-child { font-size: 13px; color: #777; }
+
+.update-spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid #dceeff;
+  border-top-color: #2196f3;
+  border-radius: 50%;
+  animation: update-spin 0.8s linear infinite;
+}
+
+@keyframes update-spin {
+  to { transform: rotate(360deg); }
 }
 
 .search-input:disabled {
