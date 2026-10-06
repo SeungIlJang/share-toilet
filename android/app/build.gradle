@@ -6,8 +6,9 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
-def defaultAdMobAppId = 'ca-app-pub-3940256099942544~3347511713'
-def configuredAdMobAppId = System.getenv('ADMOB_APP_ID') ?: project.findProperty('ADMOB_APP_ID') ?: defaultAdMobAppId
+def testAdMobAppId = 'ca-app-pub-3940256099942544~3347511713'
+def productionAdMobAppId = 'ca-app-pub-9017259597860535~2562561991'
+def configuredProductionAdMobAppId = System.getenv('ADMOB_APP_ID') ?: project.findProperty('ADMOB_APP_ID') ?: productionAdMobAppId
 
 android {
     namespace "com.sharetoilet.app"
@@ -16,9 +17,9 @@ android {
         applicationId "com.sharetoilet.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 12
-        versionName "1.5"
-        manifestPlaceholders = [admobAppId: configuredAdMobAppId]
+        versionCode 13
+        versionName "1.6"
+        manifestPlaceholders = [admobAppId: testAdMobAppId]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -38,6 +39,7 @@ android {
     }
     buildTypes {
         release {
+            manifestPlaceholders = [admobAppId: configuredProductionAdMobAppId]
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (keystorePropertiesFile.exists()) {

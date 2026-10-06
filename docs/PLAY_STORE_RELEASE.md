@@ -4,7 +4,7 @@
 
 - 앱 이름: 모두의 화장실
 - 패키지 ID: `com.sharetoilet.app`
-- 초기 버전: `1.0` (`versionCode 1`)
+- 현재 버전: `1.6` (`versionCode 13`)
 - 카테고리 제안: 여행 및 지역정보
 - 가격: 무료
 - 광고: 있음 (Google AdMob 하단 배너 1개)
