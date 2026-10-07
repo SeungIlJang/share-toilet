@@ -81,8 +81,6 @@ const userPosition = ref(null);   // 사용자의 실제 현재 위치
 const searchOrigin = ref(null);   // 반경 검색 기준점 (내 위치 또는 '이 근처 검색' 지점)
 const searchRadius = ref(DEFAULT_RADIUS);
 const mode = ref('search');       // 'search' | 'near'
-const pendingRegion = ref(null);  // 지도 이동 후 검색 대기 중인 중심 좌표
-const showSearchAreaBtn = ref(false); // '이 근처 검색' 버튼 노출 여부
 const sheetExpanded = ref(false); // 하단 목록 시트 펼침 여부 (모바일)
 const carCampingFilter = ref('all'); // 차박 편의정보 필터
 const showCarCampingFilters = ref(false); // 필요할 때만 차박 조회조건 펼침
@@ -366,7 +364,6 @@ const handleSearch = debounce((e) => {
   searchQuery.value = query;
   mode.value = 'search';
   selectedToiletId.value = null;
-  showSearchAreaBtn.value = false;
 
   if (query && isValidKoreanSearch(query)) {
     const first = searchResults.value[0];
@@ -394,7 +391,6 @@ const moveToCurrentLocation = async () => {
   mode.value = 'near';
   searchQuery.value = '';
   selectedToiletId.value = null;
-  showSearchAreaBtn.value = false;
   isLocating.value = true;
 
   try {
@@ -412,29 +408,12 @@ const moveToCurrentLocation = async () => {
   }
 };
 
-// 지도 영역 변경 시: '이 근처 검색' 버튼 노출
+// 사용자가 지도 이동/확대를 마치면 현재 중심 기준으로 즉시 다시 조회한다.
 const handleRegionChanged = (center) => {
-  pendingRegion.value = center;
-  // 기준점에서 어느 정도 이동했을 때만 버튼 노출
-  if (!searchOrigin.value) {
-    showSearchAreaBtn.value = true;
-    return;
-  }
-  const moved = getDistanceFromLatLonInKm(
-    searchOrigin.value.latitude, searchOrigin.value.longitude,
-    center.latitude, center.longitude
-  );
-  showSearchAreaBtn.value = moved > 0.1; // 100m 이상 이동 시
-};
-
-// '이 근처 검색': 현재 지도 중심 기준으로 재검색 (지도는 이동하지 않음)
-const searchThisArea = () => {
-  if (!pendingRegion.value) return;
   mode.value = 'near';
   searchQuery.value = '';
   selectedToiletId.value = null;
-  searchOrigin.value = { ...pendingRegion.value };
-  showSearchAreaBtn.value = false;
+  searchOrigin.value = { ...center };
 };
 
 const handleMapTap = () => {
@@ -476,13 +455,6 @@ onUnmounted(() => {
         @map-tap="handleMapTap"
         @set-status="voteStatus"
       />
-      <button
-        v-if="showSearchAreaBtn"
-        class="search-area-btn"
-        @click="searchThisArea"
-      >
-        🔍 이 근처 검색
-      </button>
     </div>
     <div class="bottom-container" :class="{ expanded: sheetExpanded }">
       <button
@@ -619,34 +591,6 @@ onUnmounted(() => {
   flex: 1;
   position: relative;
   min-height: 300px; /* 모바일에서 최소 높이 보장 */
-}
-
-/* '이 근처 검색' 버튼 (지도 상단 중앙 플로팅) */
-.search-area-btn {
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  padding: 10px 20px;
-  background-color: #2196F3;
-  color: #fff;
-  border: none;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.2s;
-}
-
-.search-area-btn:hover {
-  background-color: #1976D2;
-}
-
-.search-area-btn:active {
-  transform: translateX(-50%) scale(0.97);
 }
 
 .bottom-container {
@@ -955,11 +899,6 @@ ul:empty::after {
   .container {
     height: calc(100vh - var(--admob-banner-height, 0px));
     overflow: hidden;
-  }
-
-  /* 상태바·카메라 홀과 겹치지 않도록 모바일에서는 버튼을 아래로 배치 */
-  .search-area-btn {
-    top: max(76px, calc(env(safe-area-inset-top, 0px) + 52px));
   }
 
   /* 지도는 남은 공간을 채움 (고정 70vh 제거 → 하단 시트가 잘리지 않도록) */
