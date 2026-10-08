@@ -17,8 +17,8 @@ android {
         applicationId "com.sharetoilet.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 16
-        versionName "1.9"
+        versionCode 17
+        versionName "1.10"
         manifestPlaceholders = [admobAppId: testAdMobAppId]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -40,8 +40,9 @@ android {
     buildTypes {
         release {
             manifestPlaceholders = [admobAppId: configuredProductionAdMobAppId]
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (keystorePropertiesFile.exists()) {
                 signingConfig signingConfigs.release
             }
