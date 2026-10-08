@@ -569,11 +569,8 @@ onUnmounted(() => {
 
 <style scoped>
 .container {
-  width: 100%;
-  height: calc(100vh - var(--admob-banner-height, 0px));
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0 0 var(--admob-banner-height, 0px);
   display: flex;
   flex-direction: column;
   -webkit-user-select: none;
@@ -897,7 +894,6 @@ ul:empty::after {
 
 @media (max-width: 768px) {
   .container {
-    height: calc(100vh - var(--admob-banner-height, 0px));
     overflow: hidden;
   }
 

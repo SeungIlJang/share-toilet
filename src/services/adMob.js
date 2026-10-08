@@ -11,86 +11,29 @@ import {
 const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111'
 const PRODUCTION_BANNER_ID = 'ca-app-pub-9017259597860535/1002068317'
 const RESERVED_BANNER_HEIGHT = 60
-const RETRY_DELAYS_MS = [15_000, 30_000, 60_000, 120_000, 300_000]
-const isAndroidApp = () => Capacitor.getPlatform() === 'android'
-const liveAdsEnabled = import.meta.env.PROD && import.meta.env.VITE_ADMOB_LIVE !== 'false'
-const bannerId = liveAdsEnabled
-  ? import.meta.env.VITE_ADMOB_BANNER_ID || PRODUCTION_BANNER_ID
-  : TEST_BANNER_ID
+const isAndroidApp = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+const liveAdsEnabled = import.meta.env.VITE_ADMOB_LIVE !== 'false'
+const testAdsEnabled = import.meta.env.DEV || import.meta.env.VITE_ADMOB_TEST === 'true'
+const configuredBannerId = import.meta.env.VITE_ADMOB_BANNER_ID || PRODUCTION_BANNER_ID
+const bannerId = liveAdsEnabled ? configuredBannerId : TEST_BANNER_ID
+const adsEnabled = testAdsEnabled || (liveAdsEnabled && Boolean(configuredBannerId))
 
 let initialized = false
-let initializing = false
-let listenersRegistered = false
-let retryAttempt = 0
-let retryTimer = null
 
 const setBannerSpace = (height = 0) => {
   document.documentElement.style.setProperty('--admob-banner-height', `${Math.max(0, height)}px`)
 }
 
-const bannerOptions = {
-  adId: bannerId,
-  adSize: BannerAdSize.ADAPTIVE_BANNER,
-  position: BannerAdPosition.BOTTOM_CENTER,
-  margin: 0,
-  isTesting: !liveAdsEnabled,
-}
-
-const scheduleRetry = () => {
-  if (retryTimer || retryAttempt >= RETRY_DELAYS_MS.length) return
-  const delay = RETRY_DELAYS_MS[retryAttempt]
-  retryAttempt += 1
-  retryTimer = window.setTimeout(() => {
-    retryTimer = null
-    if (initialized) {
-      void showBanner()
-    } else {
-      void initializeAdMob()
-    }
-  }, delay)
-}
-
-const showBanner = async () => {
-  try {
-    await AdMob.showBanner(bannerOptions)
-  } catch (error) {
-    console.warn('[admob] 배너 요청 실패:', error)
-    setBannerSpace(RESERVED_BANNER_HEIGHT)
-    scheduleRetry()
-  }
-}
-
-const registerBannerListeners = async () => {
-  if (listenersRegistered) return
-
-  await AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
-    retryAttempt = 0
-    if (retryTimer) window.clearTimeout(retryTimer)
-    retryTimer = null
-    console.info('[admob] 배너 로드 완료')
-  })
-  await AdMob.addListener(BannerAdPluginEvents.SizeChanged, ({ height }) => {
-    setBannerSpace(height || RESERVED_BANNER_HEIGHT)
-  })
-  await AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (error) => {
-    console.warn('[admob] 배너 로드 실패:', error)
-    setBannerSpace(RESERVED_BANNER_HEIGHT)
-    scheduleRetry()
-  })
-  listenersRegistered = true
-}
-
 export const initializeAdMob = async () => {
-  // OTA reload 직후에도 네이티브 브리지를 현재 시점에 다시 판정한다.
-  // 모듈 로드 시점의 판정값을 고정하면 Android에서도 배너 여백 설정을 건너뛸 수 있다.
   if (!isAndroidApp()) return
+
+  // 광고가 늦게 로드되거나 요청에 실패해도 화면이 배너와 겹치지 않게 한다.
   setBannerSpace(RESERVED_BANNER_HEIGHT)
-  if (initialized || initializing) return
-  initializing = true
+  if (initialized || !adsEnabled) return
 
   try {
     await AdMob.initialize({
-      initializeForTesting: !liveAdsEnabled,
+      initializeForTesting: testAdsEnabled,
       maxAdContentRating: MaxAdContentRating.General,
     })
 
@@ -99,20 +42,24 @@ export const initializeAdMob = async () => {
       consentInfo = await AdMob.showConsentForm()
     }
 
-    if (consentInfo.status === AdmobConsentStatus.REQUIRED) {
-      console.info('[admob] 광고 동의가 완료되지 않아 배너 요청을 보류합니다.')
-      return
-    }
+    if (consentInfo.status === AdmobConsentStatus.REQUIRED) return
 
-    await registerBannerListeners()
+    await AdMob.addListener(BannerAdPluginEvents.SizeChanged, ({ height }) => {
+      setBannerSpace(height || RESERVED_BANNER_HEIGHT)
+    })
+    await AdMob.addListener(
+      BannerAdPluginEvents.FailedToLoad,
+      () => setBannerSpace(RESERVED_BANNER_HEIGHT),
+    )
+    await AdMob.showBanner({
+      adId: bannerId,
+      adSize: BannerAdSize.ADAPTIVE_BANNER,
+      position: BannerAdPosition.BOTTOM_CENTER,
+      margin: 0,
+      isTesting: testAdsEnabled,
+    })
     initialized = true
-    await showBanner()
-  } catch (error) {
-    console.warn('[admob] 초기화 실패:', error)
-    initialized = false
+  } catch {
     setBannerSpace(RESERVED_BANNER_HEIGHT)
-    scheduleRetry()
-  } finally {
-    initializing = false
   }
 }
