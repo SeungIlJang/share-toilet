@@ -21,6 +21,8 @@
 #-renamesourcefileattribute SourceFile
 
 # Capacitor discovers plugins and their bridge methods at runtime.
+-keepattributes RuntimeVisibleAnnotations,RuntimeInvisibleAnnotations,AnnotationDefault
+-keep @interface com.getcapacitor.annotation.**
 -keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
 -keep @com.getcapacitor.annotation.NativePlugin class * { *; }
 -keepclassmembers class * {
