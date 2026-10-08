@@ -12,7 +12,7 @@ const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111'
 const PRODUCTION_BANNER_ID = 'ca-app-pub-9017259597860535/1002068317'
 const RESERVED_BANNER_HEIGHT = 60
 const RETRY_DELAYS_MS = [15_000, 30_000, 60_000, 120_000, 300_000]
-const isAndroidApp = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+const isAndroidApp = () => Capacitor.getPlatform() === 'android'
 const liveAdsEnabled = import.meta.env.PROD && import.meta.env.VITE_ADMOB_LIVE !== 'false'
 const bannerId = liveAdsEnabled
   ? import.meta.env.VITE_ADMOB_BANNER_ID || PRODUCTION_BANNER_ID
@@ -81,7 +81,9 @@ const registerBannerListeners = async () => {
 }
 
 export const initializeAdMob = async () => {
-  if (!isAndroidApp) return
+  // OTA reload 직후에도 네이티브 브리지를 현재 시점에 다시 판정한다.
+  // 모듈 로드 시점의 판정값을 고정하면 Android에서도 배너 여백 설정을 건너뛸 수 있다.
+  if (!isAndroidApp()) return
   setBannerSpace(RESERVED_BANNER_HEIGHT)
   if (initialized || initializing) return
   initializing = true
