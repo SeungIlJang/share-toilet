@@ -106,7 +106,6 @@ const handleAdMobStatus = (event) => {
   };
   adMobStatus.value = entry;
   adMobStatusHistory.value = [...adMobStatusHistory.value, entry].slice(-8);
-  if (entry.level === 'error' || entry.level === 'warning') showAdMobDetails.value = true;
 };
 
 // ── 유틸 ─────────────────────────────────────────────────
@@ -464,23 +463,45 @@ onUnmounted(() => {
         <span>잠시만 기다려 주세요</span>
       </div>
     </div>
-    <aside class="ad-diagnostic" :class="`is-${adMobStatus.level}`" aria-live="polite">
+    <aside
+      class="ad-diagnostic"
+      :class="[`is-${adMobStatus.level}`, { 'is-open': showAdMobDetails }]"
+      aria-live="polite"
+    >
       <button
+        v-if="!showAdMobDetails"
         type="button"
         class="ad-diagnostic-toggle"
-        :aria-expanded="showAdMobDetails"
-        @click="showAdMobDetails = !showAdMobDetails"
+        aria-expanded="false"
+        aria-controls="ad-diagnostic-panel"
+        @click="showAdMobDetails = true"
       >
         <span class="ad-diagnostic-dot" aria-hidden="true"></span>
-        <span><strong>광고 상태</strong> · {{ adMobStatus.message }}</span>
-        <span aria-hidden="true">{{ showAdMobDetails ? '▲' : '▼' }}</span>
+        <span>광고 로그</span>
       </button>
-      <ol v-if="showAdMobDetails" class="ad-diagnostic-history">
-        <li v-for="(entry, index) in adMobStatusHistory" :key="`${entry.time}-${index}`">
-          <time>{{ entry.time }}</time>
-          <span>{{ entry.message }}</span>
-        </li>
-      </ol>
+      <div v-else id="ad-diagnostic-panel" class="ad-diagnostic-panel">
+        <div class="ad-diagnostic-header">
+          <span class="ad-diagnostic-title">
+            <span class="ad-diagnostic-dot" aria-hidden="true"></span>
+            <strong>광고 상태 로그</strong>
+          </span>
+          <button
+            type="button"
+            class="ad-diagnostic-close"
+            aria-label="광고 상태 로그 닫기"
+            @click="showAdMobDetails = false"
+          >
+            닫기
+          </button>
+        </div>
+        <p class="ad-diagnostic-current">{{ adMobStatus.message }}</p>
+        <ol class="ad-diagnostic-history">
+          <li v-for="(entry, index) in adMobStatusHistory" :key="`${entry.time}-${index}`">
+            <time>{{ entry.time }}</time>
+            <span>{{ entry.message }}</span>
+          </li>
+        </ol>
+      </div>
     </aside>
     <div class="map-container">
       <NaverMapMarker
@@ -633,39 +654,38 @@ onUnmounted(() => {
   z-index: 9500;
   top: max(10px, env(safe-area-inset-top));
   right: 10px;
-  width: min(420px, calc(100vw - 20px));
+  width: auto;
   overflow: hidden;
   border: 1px solid rgba(33, 150, 243, 0.38);
-  border-radius: 10px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.94);
   color: #263238;
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.16);
   backdrop-filter: blur(4px);
 }
 
+.ad-diagnostic.is-open {
+  width: min(420px, calc(100vw - 20px));
+  border-radius: 10px;
+}
+
 .ad-diagnostic-toggle {
-  width: 100%;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 10px;
+  gap: 6px;
+  padding: 6px 9px;
   border: 0;
   background: transparent;
   color: inherit;
-  font-size: 12px;
-  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
 }
 
-.ad-diagnostic-toggle span:nth-child(2) {
-  flex: 1;
-  min-width: 0;
-}
-
 .ad-diagnostic-dot {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 9px;
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
   border-radius: 50%;
   background: #2196f3;
 }
@@ -677,6 +697,40 @@ onUnmounted(() => {
 .ad-diagnostic.is-error { border-color: rgba(198, 40, 40, 0.55); }
 .ad-diagnostic.is-error .ad-diagnostic-dot { background: #c62828; }
 .ad-diagnostic.is-muted .ad-diagnostic-dot { background: #757575; }
+
+.ad-diagnostic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+}
+
+.ad-diagnostic-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.ad-diagnostic-close {
+  padding: 4px 9px;
+  border: 1px solid #cfd8dc;
+  border-radius: 6px;
+  background: #fff;
+  color: #455a64;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ad-diagnostic-current {
+  margin: 0;
+  padding: 0 10px 8px;
+  color: #455a64;
+  font-size: 11px;
+  line-height: 1.4;
+}
 
 .ad-diagnostic-history {
   max-height: 180px;
