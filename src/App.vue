@@ -5,7 +5,7 @@ import { toiletsData } from './assets/data.js';
 import { getCurrentPosition } from './utils/geolocation.js';
 import { loadStatus, saveStatus } from './utils/statusStore.js';
 import { CAR_CAMPING_OPTIONS, withCarCampingInfo } from './utils/carCamping.js';
-import { initializeAdMob } from './services/adMob.js';
+import { ADMOB_STATUS_EVENT, initializeAdMob } from './services/adMob.js';
 import { matchesToiletSearch } from './utils/toiletSearch.js';
 
 // 화장실 상태 옵션 (사용자 표시, 파일로 저장)
@@ -85,10 +85,28 @@ const sheetExpanded = ref(false); // 하단 목록 시트 펼침 여부 (모바�
 const carCampingFilter = ref('all'); // 차박 편의정보 필터
 const showCarCampingFilters = ref(false); // 필요할 때만 차박 조회조건 펼침
 const updateMessage = ref(''); // OTA 확인/다운로드/적용 상태
+const adMobStatus = ref({ level: 'info', message: '광고 상태 확인 대기 중' });
+const adMobStatusHistory = ref([]);
+const showAdMobDetails = ref(false);
 
 const handleUpdateStatus = (event) => {
   const { status, message } = event.detail || {};
   updateMessage.value = status === 'ready' ? '' : (message || '업데이트 중...');
+};
+
+const handleAdMobStatus = (event) => {
+  const detail = event.detail || {};
+  const entry = {
+    level: detail.level || 'info',
+    message: detail.message || '광고 상태를 확인할 수 없습니다.',
+    stage: detail.stage || 'unknown',
+    time: detail.timestamp
+      ? new Date(detail.timestamp).toLocaleTimeString('ko-KR', { hour12: false })
+      : new Date().toLocaleTimeString('ko-KR', { hour12: false }),
+  };
+  adMobStatus.value = entry;
+  adMobStatusHistory.value = [...adMobStatusHistory.value, entry].slice(-8);
+  if (entry.level === 'error' || entry.level === 'warning') showAdMobDetails.value = true;
 };
 
 // ── 유틸 ─────────────────────────────────────────────────
@@ -423,6 +441,7 @@ const handleMapTap = () => {
 
 onMounted(() => {
   window.addEventListener('share-toilet:update-status', handleUpdateStatus);
+  window.addEventListener(ADMOB_STATUS_EVENT, handleAdMobStatus);
   initializeAdMob();
   loadStatus().then((s) => { toiletStatus.value = migrateStatus(s); }); // 저장된 상태 파일 로드
   fetchToilets().then(() => {
@@ -432,6 +451,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('share-toilet:update-status', handleUpdateStatus);
+  window.removeEventListener(ADMOB_STATUS_EVENT, handleAdMobStatus);
 });
 </script>
 
@@ -444,6 +464,24 @@ onUnmounted(() => {
         <span>잠시만 기다려 주세요</span>
       </div>
     </div>
+    <aside class="ad-diagnostic" :class="`is-${adMobStatus.level}`" aria-live="polite">
+      <button
+        type="button"
+        class="ad-diagnostic-toggle"
+        :aria-expanded="showAdMobDetails"
+        @click="showAdMobDetails = !showAdMobDetails"
+      >
+        <span class="ad-diagnostic-dot" aria-hidden="true"></span>
+        <span><strong>광고 상태</strong> · {{ adMobStatus.message }}</span>
+        <span aria-hidden="true">{{ showAdMobDetails ? '▲' : '▼' }}</span>
+      </button>
+      <ol v-if="showAdMobDetails" class="ad-diagnostic-history">
+        <li v-for="(entry, index) in adMobStatusHistory" :key="`${entry.time}-${index}`">
+          <time>{{ entry.time }}</time>
+          <span>{{ entry.message }}</span>
+        </li>
+      </ol>
+    </aside>
     <div class="map-container">
       <NaverMapMarker
         :locations="displayedLocations"
@@ -589,6 +627,75 @@ onUnmounted(() => {
   position: relative;
   min-height: 300px; /* 모바일에서 최소 높이 보장 */
 }
+
+.ad-diagnostic {
+  position: fixed;
+  z-index: 9500;
+  top: max(10px, env(safe-area-inset-top));
+  right: 10px;
+  width: min(420px, calc(100vw - 20px));
+  overflow: hidden;
+  border: 1px solid rgba(33, 150, 243, 0.38);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #263238;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(4px);
+}
+
+.ad-diagnostic-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ad-diagnostic-toggle span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+.ad-diagnostic-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: #2196f3;
+}
+
+.ad-diagnostic.is-success { border-color: rgba(46, 125, 50, 0.45); }
+.ad-diagnostic.is-success .ad-diagnostic-dot { background: #2e7d32; }
+.ad-diagnostic.is-warning { border-color: rgba(239, 108, 0, 0.55); }
+.ad-diagnostic.is-warning .ad-diagnostic-dot { background: #ef6c00; }
+.ad-diagnostic.is-error { border-color: rgba(198, 40, 40, 0.55); }
+.ad-diagnostic.is-error .ad-diagnostic-dot { background: #c62828; }
+.ad-diagnostic.is-muted .ad-diagnostic-dot { background: #757575; }
+
+.ad-diagnostic-history {
+  max-height: 180px;
+  margin: 0;
+  padding: 2px 10px 9px;
+  overflow-y: auto;
+  list-style: none;
+  border-top: 1px solid #eceff1;
+  font-size: 11px;
+}
+
+.ad-diagnostic-history li {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 7px;
+  padding-top: 6px;
+}
+
+.ad-diagnostic-history time { color: #78909c; }
 
 .bottom-container {
   background-color: #f5f5f5;
