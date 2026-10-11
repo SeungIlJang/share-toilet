@@ -69,16 +69,23 @@ export const initializeAdMob = async () => {
     })
     emitAdMobStatus('initialized', `AdMob SDK 초기화 완료 · ${testAdsEnabled ? '테스트 광고' : '운영 광고'}`)
 
-    emitAdMobStatus('consent-check', '광고 동의 상태 확인 중…')
-    let consentInfo = await AdMob.requestConsentInfo()
-    emitAdMobStatus('consent-status', `광고 동의 상태: ${consentInfo.status}`)
-    if (consentInfo.isConsentFormAvailable && consentInfo.status === AdmobConsentStatus.REQUIRED) {
-      emitAdMobStatus('consent-form', '광고 동의 화면 표시 중…')
-      consentInfo = await AdMob.showConsentForm()
-      emitAdMobStatus('consent-result', `광고 동의 결과: ${consentInfo.status}`)
+    // 동의 메시지가 설정되지 않은 계정에서는 requestConsentInfo()가 예외를 던진다.
+    // 동의 조회 실패가 배너 노출 자체를 막지 않도록 분리해서 처리한다.
+    let consentInfo = null
+    try {
+      emitAdMobStatus('consent-check', '광고 동의 상태 확인 중…')
+      consentInfo = await AdMob.requestConsentInfo()
+      emitAdMobStatus('consent-status', `광고 동의 상태: ${consentInfo.status}`)
+      if (consentInfo.isConsentFormAvailable && consentInfo.status === AdmobConsentStatus.REQUIRED) {
+        emitAdMobStatus('consent-form', '광고 동의 화면 표시 중…')
+        consentInfo = await AdMob.showConsentForm()
+        emitAdMobStatus('consent-result', `광고 동의 결과: ${consentInfo.status}`)
+      }
+    } catch (error) {
+      emitAdMobStatus('consent-skipped', `광고 동의 조회 실패 · 배너 요청은 계속합니다 · ${describeError(error)}`, 'warning')
     }
 
-    if (consentInfo.status === AdmobConsentStatus.REQUIRED) {
+    if (consentInfo && consentInfo.status === AdmobConsentStatus.REQUIRED) {
       emitAdMobStatus('consent-required', '광고 동의가 완료되지 않아 배너 요청을 중단했습니다.', 'warning')
       return
     }
