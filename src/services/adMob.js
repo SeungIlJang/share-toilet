@@ -108,7 +108,7 @@ export const initializeAdMob = async () => {
 
     await AdMob.addListener(BannerAdPluginEvents.SizeChanged, ({ height }) => {
       setBannerSpace(height || RESERVED_BANNER_HEIGHT)
-      emitAdMobStatus('banner-size', `배너 표시 영역 확인 · 높이 ${height || RESERVED_BANNER_HEIGHT}px`, 'success')
+      emitAdMobStatus('banner-size', `배너 표시 영역 확인 · 광고 ${height || RESERVED_BANNER_HEIGHT}px + 안전영역 ${bottomInset}px`, 'success')
     })
     await AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
       emitAdMobStatus('banner-loaded', '배너 광고 로드 성공 · 흔들기 설정 수신 가능', 'success')
@@ -120,7 +120,7 @@ export const initializeAdMob = async () => {
         emitAdMobStatus('banner-failed', `배너 광고 로드 실패 · ${describeError(error)}`, 'error')
       },
     )
-    emitAdMobStatus('banner-request', '배너 광고 요청 중…')
+    emitAdMobStatus('banner-request', `배너 광고 요청 중… · 하단 안전영역 ${bottomInset}px · margin ${bottomInset}`)
     await AdMob.showBanner({
       adId: bannerId,
       adSize: BannerAdSize.ADAPTIVE_BANNER,
