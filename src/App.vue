@@ -477,18 +477,18 @@ onUnmounted(() => {
         @click="showAdMobDetails = true"
       >
         <span class="ad-diagnostic-dot" aria-hidden="true"></span>
-        <span>광고 로그</span>
+        <span>로그</span>
       </button>
       <div v-else id="ad-diagnostic-panel" class="ad-diagnostic-panel">
         <div class="ad-diagnostic-header">
           <span class="ad-diagnostic-title">
             <span class="ad-diagnostic-dot" aria-hidden="true"></span>
-            <strong>광고 상태 로그</strong>
+            <strong>로그</strong>
           </span>
           <button
             type="button"
             class="ad-diagnostic-close"
-            aria-label="광고 상태 로그 닫기"
+            aria-label="로그 닫기"
             @click="showAdMobDetails = false"
           >
             닫기
