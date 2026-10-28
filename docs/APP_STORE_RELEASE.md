@@ -45,3 +45,7 @@ On this Mac, provisioning at 22:29:02 on October 28 coincided with securityd loc
 3. Restore Xcode sign-in once while unlocked, then use the guard for all provisioning.
 4. Validate map selection, walking routes, local status persistence, external navigation and supported device layouts. Capture only release UI with synthetic location.
 5. Rebuild final archive, verify distribution IPA, upload, wait for processing, fill/save/read back metadata and privacy, then submit the intended build for review. Report review submission separately from Apple approval/public availability.
+
+### Account UI versus command-line discrepancy
+
+Owner supplied a current Apple Accounts screenshot showing a registered Apple account and Admin team. Both legacy preference arrays still read zero, but that alone does not prove UI logout. Updated the preflight to treat zero legacy entries as diagnostic, not a hard failure. An unlocked, guarded distribution-export attempt still returned No Accounts (exit70), without a missing-Xcode-Username warning. Account presence in the UI is confirmed; command-line provisioning is not working yet. Preserve the account and inspect a normal Xcode refresh/relaunch before requesting another sign-in. Do not conflate this observation with the earlier correlated screen-lock failure.
