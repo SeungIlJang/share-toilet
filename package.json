@@ -18,7 +18,10 @@
     "android:live": "cap run android --live-reload --host 100.76.54.2 --port 5173",
     "android:apk": "npm run cap:sync && cd android && ./gradlew assembleDebug",
     "android:aab": "npm run cap:sync && cd android && ./gradlew bundleRelease",
-    "android:release:check": "npm run cap:sync && cd android && ./gradlew lintRelease bundleRelease"
+    "android:release:check": "npm run cap:sync && cd android && ./gradlew lintRelease bundleRelease",
+    "build:ios:store": "vite build",
+    "ios:store:preflight": "python3 scripts/ios-store-preflight.py",
+    "ios:store:xcodebuild": "python3 scripts/ios-store-preflight.py --"
   },
   "dependencies": {
     "@capacitor-community/admob": "^6.2.0",
@@ -34,6 +37,7 @@
     "@capacitor/android": "^6.2.1",
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.2.1",
+    "@capacitor/ios": "^6.2.1",
     "@vitejs/plugin-vue": "^5.2.1",
     "archiver": "^7.0.1",
     "iconv-lite": "^0.7.3",

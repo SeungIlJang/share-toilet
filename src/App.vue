@@ -1,12 +1,14 @@
 <script setup>
 import NaverMapMarker from "@/components/NaverMapMarker.vue";
 import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { Capacitor } from '@capacitor/core';
 import { toiletsData } from './assets/data.js';
 import { getCurrentPosition } from './utils/geolocation.js';
 import { loadStatus, saveStatus } from './utils/statusStore.js';
 import { CAR_CAMPING_OPTIONS, withCarCampingInfo } from './utils/carCamping.js';
 import { ADMOB_STATUS_EVENT, initializeAdMob } from './services/adMob.js';
 import { matchesToiletSearch } from './utils/toiletSearch.js';
+const isIosApp = Capacitor.getPlatform() === 'ios';
 
 // 화장실 상태 옵션 (사용자 표시, 파일로 저장)
 const STATUS_OPTIONS = [
@@ -455,7 +457,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="container">
+  <div class="container" :class="{ 'is-ios': isIosApp }">
     <div v-if="updateMessage" class="update-overlay" role="status" aria-live="polite">
       <div class="update-card">
         <span class="update-spinner" aria-hidden="true"></span>
@@ -464,6 +466,7 @@ onUnmounted(() => {
       </div>
     </div>
     <aside
+      v-if="!isIosApp"
       class="ad-diagnostic"
       :class="[`is-${adMobStatus.level}`, { 'is-open': showAdMobDetails }]"
       aria-live="polite"
@@ -588,6 +591,10 @@ onUnmounted(() => {
           </div>
           <p v-if="showCarCampingFilters" class="camping-notice">현장 규정은 바뀔 수 있으니 관리기관 안내를 확인하세요.</p>
         </div>
+        <p v-if="isIosApp" class="ios-support">
+          <a href="https://seungiljang.github.io/privacy/share-toilet.html" target="_blank" rel="noopener">개인정보</a>
+          · <a href="https://seungiljang.github.io/privacy/share-toilet-support.html" target="_blank" rel="noopener">고객지원</a>
+        </p>
       </div>
       <div class="list-scroll">
         <ul v-if="!isLoading">
@@ -642,6 +649,11 @@ onUnmounted(() => {
   user-select: text;
   -webkit-touch-callout: default;
 }
+
+.is-ios .search-input { font-size: 16px; }
+.is-ios .bottom-container { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.ios-support { margin: 5px 0 0; font-size: 12px; color: #607d8b; }
+.ios-support a { color: inherit; }
 
 .map-container {
   flex: 1;

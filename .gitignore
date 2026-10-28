@@ -42,3 +42,10 @@ android/keystore.properties
 android/*.jks
 android/*.keystore
 android/app/release/
+
+# Private release archives, signing evidence and contact drafts
+release/
+
+# Python tooling caches
+__pycache__/
+*.pyc

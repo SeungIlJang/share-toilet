@@ -50,6 +50,8 @@ const validateManifest = (manifest) => {
 
 export async function startLiveUpdate() {
   if (!Capacitor.isNativePlatform()) return;
+  // The iOS Store app ships its reviewed bundle; Android OTA is unchanged.
+  if (Capacitor.getPlatform() === 'ios') return;
 
   try {
     reportStatus('checking', '업데이트 확인 중...');

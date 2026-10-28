@@ -255,7 +255,7 @@ const buildInfoContent = (loc) => {
     <div class="info-status">
       ${props.statusOptions.map((o) => {
         const c = counts[o.key] || 0;
-        return `<button type="button" class="stt${my === o.key ? ' on' : ''}" style="--c:${o.color}" onclick='window.__stSetStatus(${JSON.stringify(String(loc.id))}, ${JSON.stringify(o.key)})'><span class="l">${esc(o.label)}</span><span class="n">${c}</span></button>`;
+        return `<button type="button" class="stt${my === o.key ? ' on' : ''}" style="--c:${o.color}" onclick='window.__stSetStatus(${esc(JSON.stringify(String(loc.id)))}, ${esc(JSON.stringify(o.key))})'><span class="l">${esc(o.label)}</span><span class="n">${c}</span></button>`;
       }).join('')}
     </div>
     ${myOpt ? `<div class="info-my-status">내 선택: <b style="color:${myOpt.color}">${esc(myOpt.label)}</b></div>` : ''}` : '';
@@ -269,9 +269,9 @@ const buildInfoContent = (loc) => {
       ${distHtml}
       ${statusHtml}
       <div class="info-actions">
-        <button class="info-btn add-route${routeStopIndex(loc.id) >= 0 ? ' active' : ''}" type="button" onclick='window.__stToggleRouteStop(${JSON.stringify(String(loc.id))})'>${routeStopIndex(loc.id) >= 0 ? `✓ 경로 ${routeStopIndex(loc.id) + 1}` : '＋ 경로추가'}</button>
-        <button class="info-btn route" type="button" onclick='window.__stRoute(${loc.latitude}, ${loc.longitude}, ${JSON.stringify(loc.title)})'>🧭 길찾기</button>
-        <button class="info-btn copy" type="button" onclick='window.__stCopyAddress(${JSON.stringify(addr)})'>📋 주소복사</button>
+        <button class="info-btn add-route${routeStopIndex(loc.id) >= 0 ? ' active' : ''}" type="button" onclick='window.__stToggleRouteStop(${esc(JSON.stringify(String(loc.id)))})'>${routeStopIndex(loc.id) >= 0 ? `✓ 경로 ${routeStopIndex(loc.id) + 1}` : '＋ 경로추가'}</button>
+        <button class="info-btn route" type="button" onclick='window.__stRoute(${loc.latitude}, ${loc.longitude}, ${esc(JSON.stringify(loc.title))})'>🧭 길찾기</button>
+        <button class="info-btn copy" type="button" onclick='window.__stCopyAddress(${esc(JSON.stringify(addr))})'>📋 주소복사</button>
       </div>
     </div>
   `;
@@ -557,8 +557,9 @@ const registerInfoWindowHelpers = () => {
     const label = encodeURIComponent(name || '공중화장실');
     const appUrl = `nmap://route/walk?dlat=${lat}&dlng=${lng}&dname=${label}&appname=com.sharetoilet.app`;
     const webUrl = naverRouteWebUrl(lat, lng, name);
-    const storeUrl = `market://details?id=${NAVER_MAP_PACKAGE}`;
-    const storeWebUrl = `https://play.google.com/store/apps/details?id=${NAVER_MAP_PACKAGE}`;
+    const isIos = Capacitor.getPlatform() === 'ios';
+    const storeUrl = isIos ? 'itms-apps://itunes.apple.com/app/id311867728' : `market://details?id=${NAVER_MAP_PACKAGE}`;
+    const storeWebUrl = isIos ? 'https://apps.apple.com/kr/app/id311867728' : `https://play.google.com/store/apps/details?id=${NAVER_MAP_PACKAGE}`;
 
     if (!Capacitor.isNativePlatform()) {
       window.open(webUrl, '_blank'); // 웹 환경: 웹 길찾기
@@ -675,6 +676,7 @@ onMounted(async () => {
       <strong>선택 {{ routeStops.length }}곳</strong>
       <span v-if="routeSummary">{{ routeSummary }}</span>
       <span v-else>마커에서 경로를 순서대로 추가하세요</span>
+      <small>경로 데이터: © OpenStreetMap contributors</small>
     </div>
     <button type="button" class="route-view-btn" :disabled="routeStops.length < 2 || routeLoading" @click="showRoute">
       {{ routeLoading ? '경로 찾는 중…' : '경로보기' }}

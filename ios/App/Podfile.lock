@@ -1,0 +1,40 @@
+PODS:
+  - Capacitor (6.2.1):
+    - CapacitorCordova
+  - CapacitorAppLauncher (6.0.4):
+    - Capacitor
+  - CapacitorCordova (6.2.1)
+  - CapacitorFilesystem (6.0.4):
+    - Capacitor
+  - CapacitorGeolocation (6.1.1):
+    - Capacitor
+
+DEPENDENCIES:
+  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorAppLauncher (from `../../node_modules/@capacitor/app-launcher`)"
+  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
+  - "CapacitorGeolocation (from `../../node_modules/@capacitor/geolocation`)"
+
+EXTERNAL SOURCES:
+  Capacitor:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorAppLauncher:
+    :path: "../../node_modules/@capacitor/app-launcher"
+  CapacitorCordova:
+    :path: "../../node_modules/@capacitor/ios"
+  CapacitorFilesystem:
+    :path: "../../node_modules/@capacitor/filesystem"
+  CapacitorGeolocation:
+    :path: "../../node_modules/@capacitor/geolocation"
+
+SPEC CHECKSUMS:
+  Capacitor: 1e0d0e7330dea9f983b50da737d8918abcf273f8
+  CapacitorAppLauncher: 682e5c8fb765709250ed9045580db88e0e198f52
+  CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
+  CapacitorFilesystem: 45e086a4396be03456c3d53d34b17c89169dd8cd
+  CapacitorGeolocation: c518d020144978cd7eb7a25fa609a39f6c2fb93e
+
+PODFILE CHECKSUM: cdfb4c647186a93f28e2b2d5d88ab56ab50e2d12
+
+COCOAPODS: 1.16.2

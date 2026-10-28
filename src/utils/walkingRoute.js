@@ -10,7 +10,7 @@ export const buildWalkingRouteUrl = (stops) => {
 
 export const fetchWalkingRoute = async (stops, fetchImpl = fetch) => {
   if (!Array.isArray(stops) || stops.length < 2) {
-    throw new Error('경로를 보려면 음수대를 2곳 이상 선택해야 합니다.');
+    throw new Error('경로를 보려면 화장실을 2곳 이상 선택해야 합니다.');
   }
 
   const response = await fetchImpl(buildWalkingRouteUrl(stops));
