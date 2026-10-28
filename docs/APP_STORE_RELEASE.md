@@ -5,7 +5,8 @@
 - Development worktree: `share-toilet-ios-store`, branch `release/ios-appstore-20261028`.
 - Baseline: `4b47abb856838fcc56b63d7ea7de1f58ed88a352` from `github/main`.
 - Bundle ID `com.sharetoilet.app`; version/build `1.0 (1)`; minimum iOS 15.
-- Apple explicit App ID registered. **No App Store Connect app record yet:** requested display name is already taken. Owner choice of an available alternative is pending.
+- Apple explicit App ID registered. Owner-selected Store name **모두의 공중화장실** accepted; App Store Connect record **6828007172** created and read back at version **1.0 / 제출 준비 중**. Original name 모두의 화장실 was unavailable.
+- Store record: https://appstoreconnect.apple.com/apps/6828007172/distribution
 - Do not push main: main triggers the existing Android/web OTA workflow. Existing Android app, OTA and water app are separate releases.
 
 ## iOS implementation
@@ -39,7 +40,7 @@ On this Mac, provisioning at 22:29:02 on October 28 coincided with securityd loc
 
 ## Resume
 
-1. Receive the owner's available Store name; create/read back the toilet record.
+1. Store record creation is complete. Fill and read back its product metadata while remaining release gates are resolved.
 2. Inspect the intended Ncloud application after owner login and resolve real iOS map rendering. Do not borrow water's native Client ID or spoof origins.
 3. Restore Xcode sign-in once while unlocked, then use the guard for all provisioning.
 4. Validate map selection, walking routes, local status persistence, external navigation and supported device layouts. Capture only release UI with synthetic location.
