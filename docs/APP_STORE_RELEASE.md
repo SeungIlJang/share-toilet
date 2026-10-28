@@ -22,7 +22,7 @@ Location privacy declarations are a candidate, not a published App Store privacy
 ## Evidence and unresolved gates
 
 - Node tests: 7 passed.
-- Signing-guard tests: 10 passed, including lock rejection and owned-process/sleep-assertion cleanup. Live unlocked check correctly reports the absent account; live screen-lock transition has not been deliberately induced.
+- Signing-guard tests: 10 passed, including lock rejection and owned-process/sleep-assertion cleanup. Live unlocked check reports zero legacy preference entries, which is not proof of account absence; live screen-lock transition has not been deliberately induced.
 - iOS simulator build: passed.
 - `ToiletStoreQA/testRegionalSearchAndPanel`: passed (363.038 seconds); regional results, panel and support link verified.
 - Simulator location callback returns correctly; bundled toilet data fallback works.
@@ -42,10 +42,16 @@ On this Mac, provisioning at 22:29:02 on October 28 coincided with securityd loc
 
 1. Store record creation is complete. Fill and read back its product metadata while remaining release gates are resolved.
 2. Inspect the intended Ncloud application after owner login and resolve real iOS map rendering. Do not borrow water's native Client ID or spoof origins.
-3. Restore Xcode sign-in once while unlocked, then use the guard for all provisioning.
+3. Preserve the account visible in Apple Accounts. Have the owner normally quit/reopen Xcode after saving work, then verify command-line export with the guard; do not ask for another sign-in based only on legacy preference counts.
 4. Validate map selection, walking routes, local status persistence, external navigation and supported device layouts. Capture only release UI with synthetic location.
 5. Rebuild final archive, verify distribution IPA, upload, wait for processing, fill/save/read back metadata and privacy, then submit the intended build for review. Report review submission separately from Apple approval/public availability.
 
 ### Account UI versus command-line discrepancy
 
 Owner supplied a current Apple Accounts screenshot showing a registered Apple account and Admin team. Both legacy preference arrays still read zero, but that alone does not prove UI logout. Updated the preflight to treat zero legacy entries as diagnostic, not a hard failure. An unlocked, guarded distribution-export attempt still returned No Accounts (exit70), without a missing-Xcode-Username warning. Account presence in the UI is confirmed; command-line provisioning is not working yet. Preserve the account and inspect a normal Xcode refresh/relaunch before requesting another sign-in. Do not conflate this observation with the earlier correlated screen-lock failure.
+
+### October 29 continuation
+
+Prepared a private metadata draft with the approved Store name, subtitle, description, keywords, support/privacy URLs and the already supplied review-contact fields in ignored `release/share-toilet-ios-appstore-20261028/store-metadata-draft.json` (0600). These fields have not been saved in App Store Connect. Candidate copy is not proof that release functionality has passed.
+
+Fresh browser navigation confirms App Store Connect redirects to login (authResult=FAILED). Ncloud's cached dashboard initially appeared authenticated, but opening Maps displayed its session-ended dialog and then redirected to login. Both web sessions require owner login; do not infer active authentication from a cached dashboard. Requested a normal Xcode quit/reopen without account removal, since the owner already showed the account and Admin team. No duplicate export attempt was made before that refresh.
